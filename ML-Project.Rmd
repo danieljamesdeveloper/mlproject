@@ -1,0 +1,104 @@
+---
+title: "ML-Project"
+author: "DJM"
+date: "10/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ML Project
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+## Setup
+
+### Load the libraries
+
+```{r}
+library(caret)
+library(randomForest)
+library(rpart) 
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+
+```
+
+### Urls to the data location
+
+```{r}
+test_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+train_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+```
+
+### Set the Working Directory and download the data
+
+```{r}
+setwd("C:\\data")
+
+download.file(test_url, "test.csv")
+download.file(train_url, "train.csv")
+training_data <- read.csv("C:\\data\\train.csv", na.strings = c("NA", ""))
+testing_data <- read.csv("C:\\data\\test.csv", na.strings = c("NA", ""))
+```
+
+### Set the seed, partion and clean the data
+
+```{r}
+set.seed(1234)
+
+
+temp <- createDataPartition(y=training_data$classe, p=0.7, list=FALSE)
+uncleansed_training_data <- training_data[temp, ]
+uncleansed_testing_data <- training_data[-temp, ]
+
+dim(uncleansed_training_data)
+dim(uncleansed_testing_data)
+
+training <- uncleansed_training_data[, colSums(is.na(training_data)) == 0]
+testing <- uncleansed_testing_data[, colSums(is.na(testing_data)) == 0]
+
+cleansed_training_data <- training
+cleansed_testing_data <- testing
+
+
+dim(cleansed_training_data)
+dim(cleansed_testing_data)
+
+```
+
+## Create the models
+
+
+### Classification Method
+```{r}
+train_fit_model <- rpart(classe ~ ., data=cleansed_training_data, method="class")
+fancyRpartPlot(train_fit_model)
+```
+
+### Cross-validation
+
+```{r}
+cv_control <- trainControl(method = "cv")
+cv_model <- train(classe ~ ., data = cleansed_training_data, method = "rpart", trControl = cv_control)
+                 
+print(cv_model, digits = 4)
+
+fancyRpartPlot(cv_model$finalModel)
+```
+
+### Random Forest on test data
+
+```{r}
+random_forest_model_fit <- randomForest(classe ~. , data=cleansed_training_data)
+predict_random_forest <- (predict(random_forest_model_fit, cleansed_testing_data))
+conf_rf <- confusionMatrix(cleansed_testing_data$classe, predict_random_forest)
+conf_rf
+```
+
+## Summary
+All methods applied are highly accurate, however, random forest is the most accurate at predicting.
+
